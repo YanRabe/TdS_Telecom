@@ -20,9 +20,13 @@ Rs = Rb / log2(M);         %Débit symbole
 Ns = 1 / (Rs * Te);         %Facteur de suréchantillonnage
 
 %tableau des valeurs de SNR par bit souhaité à l'entrée du récpeteur en dB
-tab_Eb_N0_dB = [2: 8]; 
+tab_Eb_N0_dB = [0: 6]; 
 %Passage au SNR en linéaire
 tab_Eb_N0 = 10 .^ (tab_Eb_N0_dB / 10); 
+col_1 = [1; 1; 1; 0];
+col_2 = [0; 1; 1; 1];
+col_3 = [1; 1; 0; 1];
+G = [eye(4) col_1 col_2 col_3];
 
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % BOUCLE SUR LES NIVEAUX DE Eb/N0 A TESTER
@@ -48,7 +52,7 @@ for indice_bruit = 1:length(tab_Eb_N0_dB)
     % BOUCLE POUR PRECISION TES ET TEBS MESURES :COMPTAGE NOMBRE ERREURS
     % (voir annexe texte TP)
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    % while(nb_erreurs < 1000)
+    while(nb_erreurs < 200)
 
         %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %GENERATION DE L'INFORMATION BINAIRE
@@ -59,10 +63,13 @@ for indice_bruit = 1:length(tab_Eb_N0_dB)
         %MAPPING 
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %Mapping BPSK
-        symboles_BPSK = pskmod(bits, M, 0, InputType="bit", PlotConstellation=true);
+        symboles_BPSK = pskmod(bits, M, 0, InputType="bit", PlotConstellation=false);
         a_k = real(symboles_BPSK);
         b_k = zeros(size(a_k));
 
+        %Hamming
+        Hamming = encode(bits, 7, 4);
+        
         %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %SURECHANTILLONNAGE
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -82,7 +89,7 @@ for indice_bruit = 1:length(tab_Eb_N0_dB)
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %POUR MODULATION BPSK
         %Calcul de la puissance du signal émis en BPSK
-        P_signal = (1/ (2 * N + 1)) * sum(norm(Signal_emis_BPSK).^2);
+        P_signal = (1 / (length(Signal_emis_BPSK))) * sum(norm(Signal_emis_BPSK).^2);
 
         %Calcul de la puissance du bruit à ajouter au signal pour obtenir la valeur
         %souhaité pour le SNR par bit à l'entrée du récepteur (Eb/N0)
@@ -93,8 +100,8 @@ for indice_bruit = 1:length(tab_Eb_N0_dB)
         Bruit =sqrt(P_bruit) * randn(1, length(Signal_emis_BPSK));
 
         %Ajout du bruit canal au signal émis => signal à l'entrée du récepteur
-        Signal_recu_BPSK = Signal_emis_BPSK;
-        % Signal_recu_BPSK = Signal_emis_BPSK + Bruit;
+        % Signal_recu_BPSK = Signal_emis_BPSK;
+        Signal_recu_BPSK = Signal_emis_BPSK + Bruit;
         
         %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %FILTRAGE DE RECEPTION ADAPTE
@@ -104,8 +111,6 @@ for indice_bruit = 1:length(tab_Eb_N0_dB)
 
         %Filtrage de réception
         Signal_recu_filtre_BPSK = filter(hr, 1, Signal_recu_BPSK);
-        figure
-        plot(Signal_recu_filtre_BPSK)
         
         %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %ECHANTILLONNAGE
@@ -119,11 +124,12 @@ for indice_bruit = 1:length(tab_Eb_N0_dB)
         %DECISIONS SUR LES SYMBOLES 
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         symboles_recus_decimaux_BPSK = real(Signal_echantillonne_BPSK) > 0;
+        symboles_recus_decimaux_BPSK = symboles_recus_decimaux_BPSK * 2 - 1;
         
         %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %CALCUL DU TAUX D'ERREUR SYMBOLE CUMULE
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        TES_BPSK = TES_BPSK + sum( symboles_BPSK ~= symboles_recus_decimaux_BPSK) / length(symboles_BPSK);
+        TES_BPSK = TES_BPSK + sum(real(symboles_BPSK) ~= symboles_recus_decimaux_BPSK) / length(real(symboles_BPSK));
 
         %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %DEMAPPING
@@ -133,7 +139,7 @@ for indice_bruit = 1:length(tab_Eb_N0_dB)
         %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %CALCUL DU TAUX D'ERREUR BINAIRE CUMULE
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        TEB_BPSK = TEB_BPSK + sum( bits ~= bits_recus_BPSK) / length(bits);
+        TEB_BPSK = TEB_BPSK + sum(bits ~= bits_recus_BPSK) / length(bits);
         
         %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %CUMUL DU NOMBRE D'ERREURS ET NOMBRE DE CUMUL REALISES
@@ -141,26 +147,29 @@ for indice_bruit = 1:length(tab_Eb_N0_dB)
         nb_erreurs=nb_erreurs + sum(bits ~= bits_recus_BPSK);
         nb_cumul = nb_cumul + 1;
 
-    % end  %fin boucle sur comptage nombre d'erreurs
+    end  %fin boucle sur comptage nombre d'erreurs
 
     %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %CALCUL DU TAUX D'ERREUR SYMBOLE ET DU TAUX D'ERREUR BINAIRE POUR LA
     %VALEUR TESTEE DE Eb/N0
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     TES_simule_BPSK(indice_bruit) = TES_BPSK / nb_cumul;
-    TEB_simule_BPSK(indice_bruit) = TEB_BPSK / nb_cumul 
+    TEB_simule_BPSK(indice_bruit) = TEB_BPSK / nb_cumul;
 
     %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %DIAGRAMME DE L'OEIL EN SORTIE DU FILTRE DE RECEPTION AVEC BRUIT
     %TRACE POUR CHAQUE VALEUR DE Eb/N0
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    %MODULATION 4-ASK
-    oeil=reshape(Signal_recu_filtre_BPSK, Ns, length(Signal_recu_filtre_BPSK) / Ns);
-    figure
-    plot(oeil)
-    title(['Tracé du diagramme de l"oeil en sortie du filtre de réception (BPSK) pour E_b/N_0 = ' num2str(Eb_N0_dB) 'dB'])
+    %MODULATION BPSK
+    % oeil=reshape(Signal_recu_filtre_BPSK, Ns, length(Signal_recu_filtre_BPSK) / Ns);
+    % figure
+    % plot(oeil)
+    % title(['Tracé du diagramme de l"oeil en sortie du filtre de réception (BPSK) pour E_b/N_0 = ' num2str(Eb_N0_dB) 'dB'])
 
-    %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+end  %fin boucle sur les valeurs testées de Eb/N0
+
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %TRACE DES CONSTELLATIONS APRES ECHANTILLONNAGE POUR CHAQUE VALEUR DE Eb/N0
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %MODULATION BPSK
@@ -170,17 +179,15 @@ for indice_bruit = 1:length(tab_Eb_N0_dB)
     ylabel('b_k')
     title(['Tracé de la constellation en sortie du filtre de réception (BPSK) pour E_b/N_0 = ' num2str(Eb_N0_dB) 'dB'])
 
-end  %fin boucle sur les valeurs testées de Eb/N0
-
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %TES ET TEB THEORIQUES CHAINES IMPLANTEES
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-TES_THEO_BPSK = qfunc(sqrt(2 * Eb_N0));
+TES_THEO_BPSK = qfunc(sqrt(2 * tab_Eb_N0));
 
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %CALCUL DU TES ET TEB THEORIQUE DE LA CHAINE IMPLANTEE
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-TEB_THEO_BPSK = TES_THEO_BPSK
+TEB_THEO_BPSK = TES_THEO_BPSK;
 
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %TRACES DES TES ET TEB OBTENUS EN FONCTION DE Eb/N0
