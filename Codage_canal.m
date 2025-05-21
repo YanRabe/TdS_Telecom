@@ -167,7 +167,7 @@ for indice_bruit = 1:length(tab_Eb_N0_dB)
         bits_recus_BPSK_hamming = reshape(bits_recus_BPSK_hamming, [length(bits_recus_BPSK_hamming)/7, 7]);
 
         %cas DUR - A REFAIRE CAR IMPLEMENTATION NON CORRECTE
-        % likelihood_matrix = int2bit(bits_recus_BPSK_hamming * bits_hamming, 7);
+        likelihood_matrix = or(bits_recus_BPSK_hamming, bits_hamming');
         % likelihood_matrix = reshape(likelihood_matrix', [250 250 7]);
         % likelihood_matrix = sum(likelihood_matrix, 3);
         % [mins, min_matrix_id] = min(likelihood_matrix, [], 2);
