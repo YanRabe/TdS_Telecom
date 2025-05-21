@@ -22,11 +22,15 @@ Ns = 1 / (Rs * Te);         %Facteur de suréchantillonnage
 %tableau des valeurs de SNR par bit souhaité à l'entrée du récpeteur en dB
 tab_Eb_N0_dB = [0: 6]; 
 %Passage au SNR en linéaire
-tab_Eb_N0 = 10 .^ (tab_Eb_N0_dB / 10); 
+tab_Eb_N0 = 10 .^ (tab_Eb_N0_dB / 10);
+
 col_1 = [1; 1; 1; 0];
 col_2 = [0; 1; 1; 1];
 col_3 = [1; 1; 0; 1];
 G = [eye(4) col_1 col_2 col_3];
+
+%codage bloc: {0,1}^4 -> {0,1}^7
+
 
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % BOUCLE SUR LES NIVEAUX DE Eb/N0 A TESTER
@@ -48,6 +52,9 @@ for indice_bruit = 1:length(tab_Eb_N0_dB)
     TES_BPSK = 0;
     TEB_BPSK = 0;
     
+    TES_BPSK_hamming = 0;
+    TEB_BPSK_hamming = 0;
+    
     %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % BOUCLE POUR PRECISION TES ET TEBS MESURES :COMPTAGE NOMBRE ERREURS
     % (voir annexe texte TP)
@@ -58,32 +65,38 @@ for indice_bruit = 1:length(tab_Eb_N0_dB)
         %GENERATION DE L'INFORMATION BINAIRE
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         bits = randi([0, 1], 1, N);
-        
+        bits_hamming = mod(reshape(bits, [N/4, 4]) * G, 2); % mot de codes
+        bits_hamming = reshape(bits_hamming', length(bits_hamming), [])';
+        bits_hamming_line = reshape(bits_hamming, numel(bits_hamming), [])';
         %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        %MAPPING 
+        %MAPPING
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %Mapping BPSK
         symboles_BPSK = pskmod(bits, M, 0, InputType="bit", PlotConstellation=false);
         a_k = real(symboles_BPSK);
         b_k = zeros(size(a_k));
 
-        %Hamming
-        Hamming = encode(bits, 7, 4);
+        %Mapping BPSK avec Hamming
+        symboles_BPSK_hamming = pskmod(bits_hamming_line, M, 0, InputType="bit", PlotConstellation=false);
+        a_k_hamming = real(symboles_BPSK_hamming);
+        b_k_hamming = zeros(size(a_k));
         
         %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %SURECHANTILLONNAGE
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         somme_Diracs_ponderes_BPSK = kron(a_k, [1 zeros(1, Ns-1)]);
+        somme_Diracs_ponderes_BPSK_hamming = kron(a_k_hamming, [1 zeros(1, Ns-1)]);
         
         %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %FILTRAGE DE MISE EN FORME 
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %Génération de la réponse impulsionnelle du filtre de mise en forme
-        h= ones(1, Ns);
+        h = ones(1, Ns);
 
         %Filtrage de mise en forme
-        Signal_emis_BPSK=filter(h, 1, somme_Diracs_ponderes_BPSK);
-        
+        Signal_emis_BPSK = filter(h, 1, somme_Diracs_ponderes_BPSK);
+        Signal_emis_BPSK_hamming = filter(h, 1, somme_Diracs_ponderes_BPSK_hamming);
+ 
         %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %CANAL DE PROPAGATION AWGN
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -102,6 +115,16 @@ for indice_bruit = 1:length(tab_Eb_N0_dB)
         %Ajout du bruit canal au signal émis => signal à l'entrée du récepteur
         % Signal_recu_BPSK = Signal_emis_BPSK;
         Signal_recu_BPSK = Signal_emis_BPSK + Bruit;
+
+
+        %POUR MODULATION BPSK avec Hamming
+        P_signal_hamming = (1 / (length(Signal_emis_BPSK_hamming))) * sum(norm(Signal_emis_BPSK_hamming).^2);
+
+        P_bruit_hamming = (P_signal_hamming * Ns) / (2 * log2(M) * Eb_N0);
+
+        Bruit_hamming =sqrt(P_bruit_hamming) * randn(1, length(Signal_emis_BPSK_hamming));
+
+        Signal_recu_BPSK_hamming = Signal_emis_BPSK_hamming + Bruit_hamming;
         
         %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %FILTRAGE DE RECEPTION ADAPTE
@@ -111,30 +134,44 @@ for indice_bruit = 1:length(tab_Eb_N0_dB)
 
         %Filtrage de réception
         Signal_recu_filtre_BPSK = filter(hr, 1, Signal_recu_BPSK);
-        
+        Signal_recu_filtre_BPSK_hamming = filter(hr, 1, Signal_recu_BPSK_hamming);
+
         %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %ECHANTILLONNAGE
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %Choix de n0 
-        n0 = 4;     % A COMPLETER   
+        n0 = 4;     % A COMPLETER
         %Echantillonnage à n0+mNs
         Signal_echantillonne_BPSK = Signal_recu_filtre_BPSK(n0:Ns:end);
-        
+        Signal_echantillonne_BPSK_hamming = Signal_recu_filtre_BPSK_hamming(n0: Ns: end);
+
         %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %DECISIONS SUR LES SYMBOLES 
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         symboles_recus_decimaux_BPSK = real(Signal_echantillonne_BPSK) > 0;
         symboles_recus_decimaux_BPSK = symboles_recus_decimaux_BPSK * 2 - 1;
         
+        symboles_recus_decimaux_BPSK_hamming = real(Signal_echantillonne_BPSK_hamming) > 0;
+        symboles_recus_decimaux_BPSK_hamming = symboles_recus_decimaux_BPSK_hamming * 2 - 1;
         %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %CALCUL DU TAUX D'ERREUR SYMBOLE CUMULE
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         TES_BPSK = TES_BPSK + sum(real(symboles_BPSK) ~= symboles_recus_decimaux_BPSK) / length(real(symboles_BPSK));
+        TES_BPSK_hamming = TES_BPSK_hamming + sum(real(symboles_BPSK_hamming) ~= symboles_recus_decimaux_BPSK_hamming) / length(real(symboles_BPSK_hamming));
 
         %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %DEMAPPING
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        bits_recus_BPSK = pskdemod(Signal_echantillonne_BPSK, M);
+        bits_recus_BPSK = pskdemod(symboles_recus_decimaux_BPSK, M);
+        bits_recus_BPSK_hamming = pskdemod(symboles_recus_decimaux_BPSK_hamming, M);
+        bits_recus_BPSK_hamming = reshape(bits_recus_BPSK_hamming, [length(bits_recus_BPSK_hamming)/7, 7]);
+
+        %cas DUR - A REFAIRE CAR IMPLEMENTATION NON CORRECTE
+        % likelihood_matrix = int2bit(bits_recus_BPSK_hamming * bits_hamming, 7);
+        % likelihood_matrix = reshape(likelihood_matrix', [250 250 7]);
+        % likelihood_matrix = sum(likelihood_matrix, 3);
+        % [mins, min_matrix_id] = min(likelihood_matrix, [], 2);
+        % bits_decides_BPSK_hamming_dur = bits_hamming(min_matrix_id);
 
         %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %CALCUL DU TAUX D'ERREUR BINAIRE CUMULE
@@ -161,7 +198,7 @@ for indice_bruit = 1:length(tab_Eb_N0_dB)
     %TRACE POUR CHAQUE VALEUR DE Eb/N0
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %MODULATION BPSK
-    % oeil=reshape(Signal_recu_filtre_BPSK, Ns, length(Signal_recu_filtre_BPSK) / Ns);
+    % oeil=reshape(Signal_recu_BPSK, Ns, length(Signal_recu_filtre_BPSK) / Ns);
     % figure
     % plot(oeil)
     % title(['Tracé du diagramme de l"oeil en sortie du filtre de réception (BPSK) pour E_b/N_0 = ' num2str(Eb_N0_dB) 'dB'])
