@@ -29,9 +29,9 @@ col_2 = [0; 1; 1; 1];
 col_3 = [1; 1; 0; 1];
 G = [eye(4) col_1 col_2 col_3];
 
-H = [1 0 1 0 1 0 1; %matrice de parité tq GH'=0
-    0 1 1 0 0 1 1;
-    0 0 0 1 1 1 1];
+% H = [1 0 1 0 1 0 1; %matrice de parité tq GH'=0
+%     0 1 1 0 0 1 1;
+%     0 0 0 1 1 1 1];
 
 dico_mots = de2bi(0:15, 4, 'left-msb');  % Tous les mots en 4 bits
 code_mots = mod(dico_mots * G, 2);    % Tous les mots codés en 7 bits
@@ -67,7 +67,7 @@ for indice_bruit = 1:length(tab_Eb_N0_dB)
     % BOUCLE POUR PRECISION TES ET TEBS MESURES :COMPTAGE NOMBRE ERREURS
     % (voir annexe texte TP)
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    while(nb_erreurs < 200)
+    while(nb_erreurs < 500)
 
         %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %GENERATION DE L'INFORMATION BINAIRE
@@ -208,7 +208,7 @@ for indice_bruit = 1:length(tab_Eb_N0_dB)
         %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %CUMUL DU NOMBRE D'ERREURS ET NOMBRE DE CUMUL REALISES
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        nb_erreurs=nb_erreurs + sum(bits ~= bits_recus_BPSK);
+        nb_erreurs=nb_erreurs + sum(bits ~= bits_decodes_BPSK_hamming_dur);
         % nb_erreurs = nb_erreurs + 1;
         nb_cumul = nb_cumul + 1;
 
@@ -281,6 +281,7 @@ hold on
 semilogy(tab_Eb_N0_dB, TEB_simule_BPSK_hamming_dur,'g-s')
 hold on
 semilogy(tab_Eb_N0_dB, TEB_simule_BPSK_hamming_souple,'k-d')
+% legend('TEB théorique BPSK', 'TEB simulé BPSK avec Hamming en décodage souple')
 legend('TEB théorique BPSK','TEB simulé BPSK', 'TEB simulé BPSK avec Hamming en décodage dur', 'TEB simulé BPSK avec Hamming en décodage souple')
 xlabel('E_b/N_0 (dB)')
 ylabel('TEB')
