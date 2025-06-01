@@ -82,9 +82,9 @@ On obtient le tracé du TEB suivant:
 
 On peut observer les différents tracés:
 
-![Tracés des TEbs avec et sans codage canal](img/TEB_simule_BPSK_all.jpg){ width=67.5% }
+![Tracés des TEBs avec et sans codage canal](img/TEB_simule_BPSK_all.jpg){ width=55.3265% }
 
-On remarque que la correction des erreurs introduites par le bruit gaussien premet, pour un même ***SNR*** ($Eb / N_0$) cible, d'atteindre un *TEB* est significativement plus bas pour les méthodes de codage canal. On peut même atteindre un $TEB=0$ pour un $SNR_{dB} = 6 dB$ pour le décodage souple avec notre mapping BPSK.
+On remarque que la correction des erreurs introduites par le bruit gaussien premet, pour un même ***SNR*** ($E_b / N_0$) cible, d'atteindre un *TEB* est significativement plus bas pour les méthodes de codage canal. On peut même atteindre un $TEB=0$ pour un $SNR_{dB} = 6 dB$ pour le décodage souple avec notre mapping BPSK.
 
 Ainsi, on peut conclure en premier lieu que le ***SNR*** nécessaire à l'entrée du récepteur pour obtenir un ***TEB*** donné est plus faible avec le codage canal qu'en son absence; d'où par définition l'**efficacité en puissance** se voit améliorée.
 
