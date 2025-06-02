@@ -181,20 +181,18 @@ On peut observer les différents tracés:
 
 L'analyse de l'impact de cette implémentation du codage canal sur les efficacités est peu ou prou le même que pour le code de Hamming:
 
-Grâce à la correction d'erreurs du code convolutif, pour un même ***SNR*** ($E_b / N_0$), le *TEB* atteint est significativement plus bas pour les méthodes de codage canal. On observe par ailleurs que le décodage souple obtient encore des résultats de TEB bien supérieurs au décodage dur, puisque pour $SNR_{dB} = 6dB$ on a $TEB \approx 10^{-6}$.
-
-Ainsi, ce codage canal améliore aussi l'**efficacité en puissance**.
+Grâce à la correction d'erreurs du code convolutif, pour un même ***SNR*** ($E_b / N_0$), le *TEB* atteint est significativement plus bas pour les méthodes de codage canal. On observe par ailleurs que le décodage souple obtient encore des résultats de TEB bien supérieurs au décodage dur, puisque pour $SNR_{dB} = 6dB$ on a $TEB \approx 10^{-6}$. Ainsi, ce codage canal améliore aussi l'**efficacité en puissance**.
 
 Pour autant, pour chaque bit en entrée on en génère deux; la *bande de fréquence* nécessaire pour transmettre un *débit binaire* donné est donc encore une fois plus grande. Ici, elle semble même être deux fois plus grande puisque pour chaque bit d'entrée en sortent deux. Alors, l'**efficacité spectrale** est réduite.
 
 # Comparaison des implémentations
 
-En comparant les tracés des différents TEBs, on remarque vite que le code convolutif a des *performances supérieures* au codage de Hamming en terme d'efficacité en puissance: En effet, pour un même ***SNR*** ($E_b/N_0 = 6$ dB), le code convolutif avec décodage souple atteint un $TEB \approx 10^{-6}$, tandis que le code de Hamming avec décodage souple n'atteint qu'un $TEB \approx 10^{-5}$. 
+En comparant les tracés des différents TEBs, on remarque vite que le code convolutif a des *performances supérieures* au codage de Hamming en terme d'**efficacité en puissance**: En effet, pour un même ***SNR*** ($E_b/N_0 = 6$ dB), le code convolutif avec décodage souple atteint un $TEB \approx 10^{-6}$, tandis que le code de Hamming avec décodage souple n'atteint qu'un $TEB \approx 10^{-5}$. 
 On pourrait expliquer cela par le fait que la mémoire du code convolutif utilise la corrélation entre bits successifs sur un flux continu, là où le code de Hamming travaille sur des blocs de bits "indépendants" en une traite.
 
 Ensuite, en partant du postulat que la bande de fréquence est bel et bien $2$ fois plus grande pour le code convolutif, son efficacité spectrale est donc moins bonne que le code de Hamming: Ce dernier fait passer des blocs de 4 bits à 7 bits avec la redondance, soit "seulement" $1.75$ fois plus de bits à transmettre que sans codage canal.
 
-Ainsi, là où le code convolutif est largement plus intéressant pour son efficacité en puissance, le code de Hamming garde une meilleure efficacité spectrale.
+Ainsi, là où le code convolutif est largement plus intéressant pour son efficacité en puissance, le code de Hamming garde une meilleure **efficacité spectrale**.
 
 # Conclusion
 
